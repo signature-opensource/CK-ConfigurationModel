@@ -144,4 +144,17 @@ public class ConfigurationModelTests
         scheme["properties"]!["ClientSecret"]!["x-ck-secret"]!.GetValue<bool>().ShouldBeTrue();
         scheme["properties"]!["Authority"]!["format"]!.GetValue<string>().ShouldBe( "uri" );
     }
+
+    [Test]
+    public void the_description_is_found_or_the_error_says_why()
+    {
+        ConfigurationModelDescription.TryGet( typeof( PasskeyModel ), out var d, out var error ).ShouldBeTrue();
+        d.ShouldBeSameAs( PasskeyModel.ModelDescription );
+        error.ShouldBeNull();
+
+        ConfigurationModelDescription.TryGet( typeof( ConfigurationModelTests ), out d, out error ).ShouldBeFalse();
+        d.ShouldBeNull();
+        error.ShouldContain( "must be a [ConfigurationModel] partial class" );
+        error.ShouldContain( "references the CK.ConfigurationModel package directly" );
+    }
 }

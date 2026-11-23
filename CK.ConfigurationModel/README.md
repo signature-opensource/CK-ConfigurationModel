@@ -51,6 +51,12 @@ values (the others keep their initializer). The collections are created by gener
 reflection. Its errors: `CKCM001` (a model must be `partial`), `CKCM002` (an unsupported property type), `CKCM003` (a
 model must be a top level class).
 
+**A project that declares a model references this package directly:** the generator is an analyzer, and an analyzer
+doesn't flow through an indirect package reference (NuGet keeps the analyzers private to the referencing project). The
+consumers that have a model `Type` get its description with
+[`ConfigurationModelDescription.TryGet`](ConfigurationModelDescription.cs): on failure, its error says what is missing
+(the reference, or the `[ConfigurationModel]` attribute).
+
 ## Reading a model
 
 [`ConfigurationModelReader.TryRead<T>`](ConfigurationModelReader.cs) reads a model from the **layers** of its section: the

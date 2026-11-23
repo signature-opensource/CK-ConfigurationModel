@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 
 namespace CK.Core;
 
@@ -94,6 +96,37 @@ public sealed class ConfigurationModelDescription
     }
 
     internal object Create( ConfigurationModelValues values ) => _create( values );
+
+    /// <summary>
+    /// Gets the generated description of a model type (its static <c>ModelDescription</c>, read by reflection: for the
+    /// tools and the engines that have a <see cref="Type"/>; generated code uses <c>TModel.ModelDescription</c>), or the
+    /// error that says why there is none.
+    /// <para>
+    /// The source generator is an analyzer of the CK.ConfigurationModel package: an analyzer doesn't flow through an
+    /// indirect package reference, so a project that declares a model references CK.ConfigurationModel directly. A
+    /// <c>[ConfigurationModel]</c> class without description is a project that misses this reference.
+    /// </para>
+    /// </summary>
+    /// <param name="modelType">The model type (the <c>TModel</c> of a <c>[Configuration&lt;TModel&gt;]</c>).</param>
+    /// <param name="description">The description on success.</param>
+    /// <param name="error">The reason why there is no description (for the logs) on failure.</param>
+    /// <returns>True on success, false otherwise.</returns>
+    public static bool TryGet( Type modelType,
+                               [NotNullWhen( true )] out ConfigurationModelDescription? description,
+                               [NotNullWhen( false )] out string? error )
+    {
+        ArgumentNullException.ThrowIfNull( modelType );
+        error = null;
+        description = modelType.GetProperty( "ModelDescription", BindingFlags.Public | BindingFlags.Static )?.GetValue( null ) as ConfigurationModelDescription;
+        if( description != null ) return true;
+        var project = modelType.Assembly.GetName().Name;
+        error = modelType.IsDefined( typeof( ConfigurationModelAttribute ), inherit: false )
+                ? $"The configuration model '{modelType.FullName}' has no generated description: the project '{project}' must reference "
+                  + "the CK.ConfigurationModel package directly (its source generator is an analyzer: it doesn't flow through an indirect reference)."
+                : $"The type '{modelType.FullName}' is not a configuration model: it must be a [ConfigurationModel] partial class, in a project "
+                  + $"('{project}') that references the CK.ConfigurationModel package directly (its source generator).";
+        return false;
+    }
 
     /// <inheritdoc />
     public override string ToString() => ModelType.Name;
