@@ -1,0 +1,261 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+
+namespace CK.Core;
+
+/// <summary>
+/// The kind of a property of a configuration model.
+/// </summary>
+public enum ConfigurationPropertyKind
+{
+    /// <summary>
+    /// A basic value: a string, a boolean, a number, an enum (by name), a <c>TimeSpan</c>, a <c>Guid</c>, an <c>Uri</c>.
+    /// </summary>
+    Value,
+
+    /// <summary>
+    /// A nested model (<see cref="ConfigurationPropertyDescription.Model"/>).
+    /// </summary>
+    Model,
+
+    /// <summary>
+    /// A list of values (<see cref="ConfigurationPropertyDescription.ValueType"/>) or of models
+    /// (<see cref="ConfigurationPropertyDescription.Model"/>).
+    /// </summary>
+    List,
+
+    /// <summary>
+    /// A dictionary of models (<see cref="ConfigurationPropertyDescription.Model"/>) by name.
+    /// </summary>
+    Dictionary,
+
+    /// <summary>
+    /// An opaque section (an <c>IConfiguration</c>), read by its consumer and described by its
+    /// <see cref="ConfigurationPropertyDescription.SchemaUri"/>.
+    /// </summary>
+    Opaque
+}
+
+/// <summary>
+/// The description of a configuration model (see <see cref="ConfigurationModelAttribute"/>), generated at compile time.
+/// </summary>
+public sealed class ConfigurationModelDescription
+{
+    readonly Func<ConfigurationModelValues, object> _create;
+
+    /// <summary>
+    /// Initializes a new description. Called by the generated code.
+    /// </summary>
+    /// <param name="modelType">The model type.</param>
+    /// <param name="documentation">The summary of the model's Xml documentation (plain text), if any.</param>
+    /// <param name="properties">The properties (the keys).</param>
+    /// <param name="create">Creates a model from its read values.</param>
+    public ConfigurationModelDescription( Type modelType,
+                                          string? documentation,
+                                          ImmutableArray<ConfigurationPropertyDescription> properties,
+                                          Func<ConfigurationModelValues, object> create )
+    {
+        Throw.CheckNotNullArgument( modelType );
+        Throw.CheckNotNullArgument( create );
+        ModelType = modelType;
+        Documentation = documentation;
+        Properties = properties;
+        _create = create;
+    }
+
+    /// <summary>
+    /// Gets the model type.
+    /// </summary>
+    public Type ModelType { get; }
+
+    /// <summary>
+    /// Gets the summary of the model's Xml documentation (plain text), if any.
+    /// </summary>
+    public string? Documentation { get; }
+
+    /// <summary>
+    /// Gets the properties, in their declaration order: their names are the keys of the section.
+    /// </summary>
+    public ImmutableArray<ConfigurationPropertyDescription> Properties { get; }
+
+    /// <summary>
+    /// Finds a property by its key (case insensitive, as the configuration keys).
+    /// </summary>
+    /// <param name="key">The key.</param>
+    /// <returns>The property or null.</returns>
+    public ConfigurationPropertyDescription? Find( string key )
+    {
+        foreach( var p in Properties )
+        {
+            if( string.Equals( p.Name, key, StringComparison.OrdinalIgnoreCase ) ) return p;
+        }
+        return null;
+    }
+
+    internal object Create( ConfigurationModelValues values ) => _create( values );
+
+    /// <inheritdoc />
+    public override string ToString() => ModelType.Name;
+}
+
+/// <summary>
+/// A property of a configuration model: a key of its section.
+/// </summary>
+public sealed class ConfigurationPropertyDescription
+{
+    /// <summary>
+    /// Initializes a new property description. Called by the generated code.
+    /// </summary>
+    /// <param name="name">The property name: the key.</param>
+    /// <param name="kind">The kind of property.</param>
+    /// <param name="valueType">The type of a value (the underlying type of a nullable), or of the items of a list of values.</param>
+    /// <param name="model">The nested model, the model of the items of a list or of the entries of a dictionary.</param>
+    /// <param name="isRequired">Whether the property is required.</param>
+    /// <param name="isNullable">Whether the property is nullable.</param>
+    /// <param name="hasDefault">Whether the property has an initializer.</param>
+    /// <param name="level">The level of the value.</param>
+    /// <param name="isSecret">Whether the value is a secret.</param>
+    /// <param name="isPerDeployment">Whether each deployment writes the value.</param>
+    /// <param name="schemaUri">The JSON Schema of an opaque property, if any.</param>
+    /// <param name="documentation">The summary of the property's Xml documentation (plain text), if any.</param>
+    /// <param name="createCollection">For a list or a dictionary: creates the property value from the read items (a list of values or models, or a list of named entries).</param>
+    public ConfigurationPropertyDescription( string name,
+                                             ConfigurationPropertyKind kind,
+                                             Type? valueType,
+                                             Func<ConfigurationModelDescription>? model,
+                                             bool isRequired,
+                                             bool isNullable,
+                                             bool hasDefault,
+                                             ConfigurationLevel level,
+                                             bool isSecret,
+                                             bool isPerDeployment,
+                                             string? schemaUri,
+                                             string? documentation,
+                                             Func<object, object>? createCollection = null )
+    {
+        Throw.CheckNotNullOrWhiteSpaceArgument( name );
+        Name = name;
+        Kind = kind;
+        ValueType = valueType;
+        _model = model;
+        IsRequired = isRequired;
+        IsNullable = isNullable;
+        HasDefault = hasDefault;
+        Level = level;
+        IsSecret = isSecret;
+        IsPerDeployment = isPerDeployment;
+        SchemaUri = schemaUri;
+        Documentation = documentation;
+        CreateCollection = createCollection;
+    }
+
+    readonly Func<ConfigurationModelDescription>? _model;
+
+    /// <summary>
+    /// Gets the property name: the key of the section.
+    /// </summary>
+    public string Name { get; }
+
+    /// <summary>
+    /// Gets the kind of property.
+    /// </summary>
+    public ConfigurationPropertyKind Kind { get; }
+
+    /// <summary>
+    /// Gets the type of a <see cref="ConfigurationPropertyKind.Value"/> (the underlying type of a nullable value), or of the
+    /// items of a list of values. Null otherwise.
+    /// </summary>
+    public Type? ValueType { get; }
+
+    /// <summary>
+    /// Gets the nested model, the model of the items of a list of models or of the entries of a dictionary. Null otherwise.
+    /// </summary>
+    public ConfigurationModelDescription? Model => _model?.Invoke();
+
+    /// <summary>
+    /// Gets whether the property is required (a <c>required</c> member).
+    /// </summary>
+    public bool IsRequired { get; }
+
+    /// <summary>
+    /// Gets whether the property is nullable (an optional key).
+    /// </summary>
+    public bool IsNullable { get; }
+
+    /// <summary>
+    /// Gets whether the property has an initializer (its default value).
+    /// </summary>
+    public bool HasDefault { get; }
+
+    /// <summary>
+    /// Gets the level of the value (<see cref="ConfigurationLevelAttribute"/>, <see cref="ConfigurationLevel.Init"/> by default).
+    /// </summary>
+    public ConfigurationLevel Level { get; }
+
+    /// <summary>
+    /// Gets whether the value is a secret (<see cref="ConfigurationSecretAttribute"/> on the property).
+    /// </summary>
+    public bool IsSecret { get; }
+
+    /// <summary>
+    /// Gets whether each deployment writes the value (<see cref="ConfigurationPerDeploymentAttribute"/> on the property).
+    /// </summary>
+    public bool IsPerDeployment { get; }
+
+    /// <summary>
+    /// Gets the JSON Schema of an opaque property (<see cref="ConfigurationSchemaAttribute"/>), if any.
+    /// </summary>
+    public string? SchemaUri { get; }
+
+    /// <summary>
+    /// Gets the summary of the property's Xml documentation (plain text), if any.
+    /// </summary>
+    public string? Documentation { get; }
+
+    /// <summary>
+    /// For a <see cref="ConfigurationPropertyKind.List"/>: creates the property value from the read items (an
+    /// <c>IReadOnlyList&lt;object?&gt;</c>). For a <see cref="ConfigurationPropertyKind.Dictionary"/>: from the read entries
+    /// (an <c>IReadOnlyList&lt;KeyValuePair&lt;string, object?&gt;&gt;</c>). Generated: no reflection.
+    /// </summary>
+    public Func<object, object>? CreateCollection { get; }
+
+    /// <inheritdoc />
+    public override string ToString() => $"{Name} ({Kind})";
+}
+
+/// <summary>
+/// The values read for a model, by property index (see <see cref="ConfigurationModelDescription.Properties"/>). The
+/// generated constructor of the model sets the properties that have a value: the others keep their initializer.
+/// </summary>
+public sealed class ConfigurationModelValues
+{
+    readonly object?[] _values;
+    readonly bool[] _has;
+
+    internal ConfigurationModelValues( int count )
+    {
+        _values = new object?[count];
+        _has = new bool[count];
+    }
+
+    internal void Set( int index, object? value )
+    {
+        _values[index] = value;
+        _has[index] = true;
+    }
+
+    /// <summary>
+    /// Gets whether the property at this index has been read.
+    /// </summary>
+    /// <param name="index">The property index.</param>
+    /// <returns>True when the property has a value.</returns>
+    public bool Has( int index ) => _has[index];
+
+    /// <summary>
+    /// Gets the value of the property at this index.
+    /// </summary>
+    /// <param name="index">The property index.</param>
+    /// <returns>The value.</returns>
+    public object? this[int index] => _values[index];
+}

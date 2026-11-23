@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>The configuration models: a configurable type declares the model of its section, its description is generated at compile time, the reader reads it key by key along the levels of the configuration and collects the errors, the description is written as a JSON Schema.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CK.Abstractions" Version="32.0.0-0.uc.1" />
+    <PackageReference Include="CK.Configuration" Version="3.0.0-0.uc.1" />
+    <PackageReference Include="CK.Globalization" Version="8.0.0-0.uc.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The source generator of the model descriptions: shipped as an analyzer of this package, run by its consumers. -->
+    <ProjectReference Include="..\CK.ConfigurationModel.Generator\CK.ConfigurationModel.Generator.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <None Include="..\CK.ConfigurationModel.Generator\bin\$(Configuration)\netstandard2.0\CK.ConfigurationModel.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+</Project>
