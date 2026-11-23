@@ -30,13 +30,15 @@ public static class ConfigurationModelReader
     /// <param name="path">The configuration path of the model's section (for the messages when no layer has the section).</param>
     /// <param name="collector">The collector of the messages.</param>
     /// <param name="model">The model, or null when an error has been collected.</param>
+    /// <param name="reservedKeys">The keys of the section that are not the model's (the options of its owner): not unknown.</param>
     /// <returns>True on success, false on error (the errors are in the collector).</returns>
     public static bool TryRead<T>( IReadOnlyList<ImmutableConfigurationSection?> layers,
                                    string path,
                                    UserMessageCollector collector,
-                                   out T? model ) where T : class, IDescribedConfigurationModel<T>
+                                   out T? model,
+                                   IEnumerable<string>? reservedKeys = null ) where T : class, IDescribedConfigurationModel<T>
     {
-        var o = TryRead( T.ModelDescription, layers, path, collector );
+        var o = TryRead( T.ModelDescription, layers, path, collector, reservedKeys );
         model = (T?)o;
         return o != null;
     }
@@ -66,17 +68,20 @@ public static class ConfigurationModelReader
     /// <param name="layers">The section, then the sections of the levels above it, the nearest first.</param>
     /// <param name="path">The configuration path of the model's section.</param>
     /// <param name="collector">The collector of the messages.</param>
+    /// <param name="reservedKeys">The keys of the section that are not the model's (the options of its owner): not unknown.</param>
     /// <returns>The model, or null when an error has been collected.</returns>
     public static object? TryRead( ConfigurationModelDescription description,
                                    IReadOnlyList<ImmutableConfigurationSection?> layers,
                                    string path,
-                                   UserMessageCollector collector )
+                                   UserMessageCollector collector,
+                                   IEnumerable<string>? reservedKeys = null )
     {
         Throw.CheckNotNullArgument( description );
         Throw.CheckNotNullArgument( layers );
         Throw.CheckNotNullArgument( collector );
         int errorCount = collector.ErrorCount;
-        var model = ReadModel( description, layers, path, collector );
+        var reserved = reservedKeys != null ? new HashSet<string>( reservedKeys, StringComparer.OrdinalIgnoreCase ) : null;
+        var model = ReadModel( description, layers, path, collector, reserved );
         if( model is IConfigurationModel validated && collector.ErrorCount == errorCount )
         {
             validated.Validate( collector, path );
@@ -87,7 +92,8 @@ public static class ConfigurationModelReader
     static object? ReadModel( ConfigurationModelDescription d,
                               IReadOnlyList<ImmutableConfigurationSection?> layers,
                               string path,
-                              UserMessageCollector collector )
+                              UserMessageCollector collector,
+                              HashSet<string>? reservedKeys = null )
     {
         // An unknown key in any layer is an error: a misspelled key is never silent.
         foreach( var layer in layers )
@@ -95,7 +101,7 @@ public static class ConfigurationModelReader
             if( layer == null ) continue;
             foreach( var c in layer.GetChildren() )
             {
-                if( d.Find( c.Key ) == null )
+                if( d.Find( c.Key ) == null && reservedKeys?.Contains( c.Key ) != true )
                 {
                     var keys = string.Join( ", ", d.Properties.Select( p => p.Name ) );
                     collector.Error( $"Unknown key '{c.Path}': the keys of '{layer.Path}' are {(keys.Length > 0 ? keys : "none")}." );

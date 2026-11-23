@@ -60,6 +60,7 @@ configuration), the nearest first.
 - **Key by key:** each property is the value of the nearest layer that has its key; a nested model key by key from the
   layers of its key; a dictionary entry by entry (the union of the entries of the layers); a list as a whole. A list of
   values also accepts a comma separated string.
+- **The reserved keys** (the options of the owner of the model, keys of the same section) are not unknown keys.
 - **Every error is collected** in the `UserMessageCollector` (CK.Globalization): an unknown key in any layer, a missing
   required key, a value that can't be converted (the invariant culture: `"00:05:00"`, `"1.00:00:00"` for a `TimeSpan`),
   then `Validate`.

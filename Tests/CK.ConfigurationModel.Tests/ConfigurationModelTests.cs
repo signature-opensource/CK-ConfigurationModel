@@ -66,6 +66,16 @@ public class ConfigurationModelTests
     }
 
     [Test]
+    public void the_reserved_keys_are_not_unknown()
+    {
+        // The options of the owner of a model are keys of its section.
+        var c = Collector();
+        ConfigurationModelReader.TryRead<PasskeyModel>( [Section( "Passkey", """{ "RpId": "example.com", "MyOption": true }""" )], "Test:Passkey", c, out var m, ["MyOption"] ).ShouldBeTrue();
+        m.ShouldNotBeNull();
+        Errors( c ).ShouldBeEmpty();
+    }
+
+    [Test]
     public void Validate_runs_once_the_keys_are_read()
     {
         var c = Collector();
