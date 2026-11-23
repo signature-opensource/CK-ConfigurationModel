@@ -3,11 +3,10 @@ using System;
 namespace CK.Core;
 
 /// <summary>
-/// Marks a configuration model: a <c>partial</c> class whose settable properties are the keys of a configuration section
-/// (see <see cref="ConfigurationAttribute{TModel}"/> for the link from a configurable type to its model). The source
-/// generator of CK.ConfigurationModel completes it: it implements <see cref="IDescribedConfigurationModel{TSelf}"/> (the
-/// description of the model, read by <see cref="ConfigurationModelReader"/> and written as a JSON Schema by
-/// <see cref="ConfigurationModelSchema"/>).
+/// Marks a configuration model: a class whose settable properties are the keys of a configuration section (see
+/// <see cref="ConfigurationAttribute{TModel}"/> for the link from a configurable type to its model). Its description
+/// (<see cref="ConfigurationModelDescription"/>) is read by <see cref="ConfigurationModelReader"/> and written as a JSON
+/// Schema by <see cref="ConfigurationModelSchema"/>. It has a parameterless constructor (public or not).
 /// <para>
 /// The keys are the public instance properties with a setter or an <c>init</c> accessor, declared by the class: a
 /// <c>required</c> one is required, a nullable one is optional, an initializer is the default. A get-only property is a

@@ -15,6 +15,7 @@ namespace CK.Core;
 ///   and an <c>Uri</c> are strings of format <c>uuid</c> and <c>uri</c>; a <c>TimeSpan</c> a string.</item>
 ///   <item>A list is an <c>array</c> (a list of values also accepts a comma separated <c>string</c>); a dictionary an
 ///   <c>object</c> whose <c>additionalProperties</c> is the model of its entries.</item>
+///   <item>The default value of a basic value (its initializer) is its <c>default</c>.</item>
 ///   <item>An opaque property is a <c>$ref</c> to its schema (an empty schema without one).</item>
 ///   <item>The CK vocabulary (annotations): <c>x-ck-level</c> (<c>"Compile"</c>, <c>"Init"</c>, <c>"Run"</c>),
 ///   <c>x-ck-secret</c> and <c>x-ck-perDeployment</c> (<c>true</c> when they apply).</item>
@@ -59,6 +60,7 @@ public static class ConfigurationModelSchema
         {
             var s = WriteProperty( p, defs );
             if( p.Documentation != null ) s["description"] = p.Documentation;
+            if( p.DefaultValue != null ) s["default"] = ToJson( p.DefaultValue );
             if( p.Level != ConfigurationLevel.Init ) s["x-ck-level"] = p.Level.ToString();
             if( p.IsSecret ) s["x-ck-secret"] = true;
             if( p.IsPerDeployment ) s["x-ck-perDeployment"] = true;
@@ -121,4 +123,16 @@ public static class ConfigurationModelSchema
         }
         return new JsonObject();
     }
+
+    // A basic value as it is written in a configuration (the invariant culture).
+    static JsonNode ToJson( object value ) => value switch
+    {
+        bool b => JsonValue.Create( b ),
+        int i => JsonValue.Create( i ),
+        long l => JsonValue.Create( l ),
+        double d => JsonValue.Create( d ),
+        decimal m => JsonValue.Create( m ),
+        TimeSpan t => JsonValue.Create( t.ToString( "c", System.Globalization.CultureInfo.InvariantCulture ) ),
+        _ => JsonValue.Create( value.ToString() )!
+    };
 }

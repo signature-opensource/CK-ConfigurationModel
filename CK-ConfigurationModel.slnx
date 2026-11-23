@@ -2,6 +2,6 @@
   <Folder Name="/Tests/">
     <Project Path="Tests/CK.ConfigurationModel.Tests/CK.ConfigurationModel.Tests.csproj" />
   </Folder>
-  <Project Path="CK.ConfigurationModel.Generator/CK.ConfigurationModel.Generator.csproj" />
+  <Project Path="CK.ConfigurationModel.Engine/CK.ConfigurationModel.Engine.csproj" />
   <Project Path="CK.ConfigurationModel/CK.ConfigurationModel.csproj" />
 </Solution>

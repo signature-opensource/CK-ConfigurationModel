@@ -17,9 +17,9 @@ public class ConfigurationModelTests
     static string[] Errors( UserMessageCollector c ) => c.UserMessages.Where( m => m.Level == UserMessageLevel.Error ).Select( m => m.Text ).ToArray();
 
     [Test]
-    public void the_description_is_generated()
+    public void the_description_is_built_by_reflection()
     {
-        var d = PasskeyModel.ModelDescription;
+        var d = ConfigurationModelDescription.Get( typeof( PasskeyModel ) );
         d.ModelType.ShouldBe( typeof( PasskeyModel ) );
         d.Documentation.ShouldBe( "The passkeys of a party (the shape of the Passkey option)." );
         d.Properties.Select( p => p.Name ).ShouldBe( ["RpId", "RpName", "Timeout"] );
@@ -29,16 +29,22 @@ public class ConfigurationModelTests
         d.Find( "RpName" )!.IsNullable.ShouldBeTrue();
         d.Find( "RpName" )!.Documentation.ShouldBe( "Gets the displayed name of the relying party. Defaults to the RpId." );
         d.Find( "Timeout" )!.HasDefault.ShouldBeTrue();
+        d.Find( "Timeout" )!.DefaultValue.ShouldBe( TimeSpan.FromMinutes( 5 ) );
+        d.Find( "RpName" )!.HasDefault.ShouldBeFalse();
 
-        var root = RootModel.ModelDescription;
+        var root = ConfigurationModelDescription.Get( typeof( RootModel ) );
+        // Built once per type.
+        ConfigurationModelDescription.Get( typeof( RootModel ) ).ShouldBeSameAs( root );
         root.Find( "Count" )!.Level.ShouldBe( ConfigurationLevel.Run );
         root.Find( "Passkey" )!.Kind.ShouldBe( ConfigurationPropertyKind.Model );
-        root.Find( "Passkey" )!.Model.ShouldBe( PasskeyModel.ModelDescription );
+        root.Find( "Passkey" )!.Model.ShouldBeSameAs( d );
+        root.Find( "Mode" )!.HasDefault.ShouldBeFalse( "Off is the default of the enum: no initializer to tell." );
+        root.Find( "Count" )!.DefaultValue.ShouldBe( 3 );
         root.Find( "Cultures" )!.Kind.ShouldBe( ConfigurationPropertyKind.List );
         root.Find( "Schemes" )!.Kind.ShouldBe( ConfigurationPropertyKind.Dictionary );
         root.Find( "PublicUrl" )!.IsPerDeployment.ShouldBeTrue();
         root.Find( "Kestrel" )!.Kind.ShouldBe( ConfigurationPropertyKind.Opaque );
-        SchemeModel.ModelDescription.Find( "ClientSecret" )!.IsSecret.ShouldBeTrue();
+        ConfigurationModelDescription.Get( typeof( SchemeModel ) ).Find( "ClientSecret" )!.IsSecret.ShouldBeTrue();
     }
 
     [Test]
@@ -127,7 +133,7 @@ public class ConfigurationModelTests
     [Test]
     public void the_JSON_Schema()
     {
-        var schema = ConfigurationModelSchema.ToJsonSchema( RootModel.ModelDescription );
+        var schema = ConfigurationModelSchema.ToJsonSchema( ConfigurationModelDescription.Get( typeof( RootModel ) ) );
         TestHelper.Monitor.Info( schema.ToJsonString() );
         schema["$schema"]!.GetValue<string>().ShouldBe( ConfigurationModelSchema.Dialect );
         schema["additionalProperties"]!.GetValue<bool>().ShouldBeFalse();
@@ -149,12 +155,15 @@ public class ConfigurationModelTests
     public void the_description_is_found_or_the_error_says_why()
     {
         ConfigurationModelDescription.TryGet( typeof( PasskeyModel ), out var d, out var error ).ShouldBeTrue();
-        d.ShouldBeSameAs( PasskeyModel.ModelDescription );
+        d.ShouldBeSameAs( ConfigurationModelDescription.Get( typeof( PasskeyModel ) ) );
         error.ShouldBeNull();
 
         ConfigurationModelDescription.TryGet( typeof( ConfigurationModelTests ), out d, out error ).ShouldBeFalse();
         d.ShouldBeNull();
-        error.ShouldContain( "must be a [ConfigurationModel] partial class" );
-        error.ShouldContain( "references the CK.ConfigurationModel package directly" );
+        error.ShouldContain( "must be a concrete [ConfigurationModel] class" );
+
+        ConfigurationModelDescription.TryGet( typeof( UnsupportedModel ), out d, out error ).ShouldBeFalse();
+        error.ShouldContain( "'Stream'" );
+        error.ShouldContain( "unsupported type" );
     }
 }

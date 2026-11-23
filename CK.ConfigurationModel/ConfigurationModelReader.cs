@@ -23,7 +23,8 @@ namespace CK.Core;
 public static class ConfigurationModelReader
 {
     /// <summary>
-    /// Reads a model from the layers of its section.
+    /// Reads a model from the layers of its section. Its description is built by reflection
+    /// (<see cref="ConfigurationModelDescription.Get(Type)"/>): for the tools and the tests.
     /// </summary>
     /// <typeparam name="T">The model type.</typeparam>
     /// <param name="layers">The section, then the sections of the levels above it, the nearest first. A null (or empty) layer has no value.</param>
@@ -36,9 +37,9 @@ public static class ConfigurationModelReader
                                    string path,
                                    UserMessageCollector collector,
                                    out T? model,
-                                   IEnumerable<string>? reservedKeys = null ) where T : class, IDescribedConfigurationModel<T>
+                                   IEnumerable<string>? reservedKeys = null ) where T : class
     {
-        var o = TryRead( T.ModelDescription, layers, path, collector, reservedKeys );
+        var o = TryRead( ConfigurationModelDescription.Get( typeof( T ) ), layers, path, collector, reservedKeys );
         model = (T?)o;
         return o != null;
     }
@@ -55,7 +56,7 @@ public static class ConfigurationModelReader
     public static bool TryRead<T>( ImmutableConfigurationSection? section,
                                    string path,
                                    UserMessageCollector collector,
-                                   out T? model ) where T : class, IDescribedConfigurationModel<T>
+                                   out T? model ) where T : class
     {
         return TryRead( [section], path, collector, out model );
     }

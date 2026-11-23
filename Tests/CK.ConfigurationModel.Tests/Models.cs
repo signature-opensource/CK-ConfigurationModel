@@ -9,7 +9,7 @@ namespace CK.ConfigurationModel.Tests;
 /// The passkeys of a party (the shape of the Passkey option).
 /// </summary>
 [ConfigurationModel]
-public sealed partial class PasskeyModel : IConfigurationModel
+public sealed class PasskeyModel : IConfigurationModel
 {
     /// <summary>
     /// Gets the relying party identifier: a domain name (<c>example.com</c> or <c>localhost</c>).
@@ -49,7 +49,7 @@ public enum Mode
 /// A scheme of a provider.
 /// </summary>
 [ConfigurationModel]
-public sealed partial class SchemeModel
+public sealed class SchemeModel
 {
     public required Uri Authority { get; init; }
 
@@ -63,7 +63,7 @@ public sealed partial class SchemeModel
 /// The root model of the tests.
 /// </summary>
 [ConfigurationModel]
-public sealed partial class RootModel
+public sealed class RootModel
 {
     [ConfigurationLevel( ConfigurationLevel.Run )]
     public int Count { get; init; } = 3;
@@ -81,4 +81,13 @@ public sealed partial class RootModel
 
     [ConfigurationSchema( "https://json.schemastore.org/appsettings.json#/definitions/kestrel" )]
     public IConfiguration? Kestrel { get; init; }
+}
+
+/// <summary>
+/// A property type that is not supported.
+/// </summary>
+[ConfigurationModel]
+public sealed class UnsupportedModel
+{
+    public System.IO.Stream? Stream { get; init; }
 }

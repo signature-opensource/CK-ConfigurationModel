@@ -9,7 +9,7 @@ validated for its owner, and described for the tools (the App builder, the confi
 
 ```csharp
 [ConfigurationModel]
-public sealed partial class PasskeyConfiguration : IConfigurationModel
+public sealed class PasskeyConfiguration : IConfigurationModel
 {
     /// <summary>Gets the relying party identifier: a domain name.</summary>
     public required string RpId { get; init; }
@@ -28,8 +28,8 @@ public sealed partial class PasskeyConfiguration : IConfigurationModel
 }
 ```
 
-- [`[ConfigurationModel]`](ConfigurationModelAttribute.cs) marks a **`partial`** class; the configurable type that owns
-  it says so with `[Configuration<TModel>]` (CK.Abstractions).
+- [`[ConfigurationModel]`](ConfigurationModelAttribute.cs) marks the class (it has a parameterless constructor, public
+  or not); the configurable type that owns it says so with `[Configuration<TModel>]` (CK.Abstractions).
 - **The keys** are the public instance properties with a setter or an `init` accessor declared by the class: a `required`
   one is required, a nullable one is optional, an initializer is the default. A get-only property is a derived member.
 - **A property** is a basic value (string, bool, int, long, double, decimal, an enum by name, `TimeSpan`, `Guid`, `Uri`),
@@ -41,25 +41,27 @@ public sealed partial class PasskeyConfiguration : IConfigurationModel
 - [`IConfigurationModel`](IConfigurationModel.cs) (optional): `Validate( UserMessageCollector, path )` checks what the
   types can't say. It has no service: it runs wherever the model is read.
 
-## The generated description
+## The description
 
-The source generator (CK.ConfigurationModel.Generator, shipped as an analyzer of this package) completes each model: it
-implements [`IDescribedConfigurationModel<TSelf>`](IDescribedConfigurationModel.cs) (the static `ModelDescription`, a
-[`ConfigurationModelDescription`](ConfigurationModelDescription.cs): the properties, their kind, types, required,
-nullable, default, metadata and the summary of their Xml documentation) and a private constructor that sets the read
-values (the others keep their initializer). The collections are created by generated code: nothing is read by
-reflection. Its errors: `CKCM001` (a model must be `partial`), `CKCM002` (an unsupported property type), `CKCM003` (a
-model must be a top level class).
+[`ConfigurationModelDescription`](ConfigurationModelDescription.cs) describes a model: its properties, their kind, types,
+required, nullable, default value, metadata and the summary of their Xml documentation.
 
-**A project that declares a model references this package directly:** the generator is an analyzer, and an analyzer
-doesn't flow through an indirect package reference (NuGet keeps the analyzers private to the referencing project). The
-consumers that have a model `Type` get its description with
-[`ConfigurationModelDescription.TryGet`](ConfigurationModelDescription.cs): on failure, its error says what is missing
-(the reference, or the `[ConfigurationModel]` attribute).
+- **By reflection**, for the tools, the App builder, the engines and the tests:
+  [`ConfigurationModelDescription.TryGet( Type )`](ConfigurationModelDescription.cs) builds it once per type, or says why
+  the type is not a model (not a `[ConfigurationModel]`, an unsupported property type, no parameterless constructor).
+  The documentation comes from the Xml documentation file next to the model's assembly, when there is one (the packages
+  have it; a local Debug build doesn't).
+- **As code**, at run time: the engine that creates a modeled object generates its description and its creation with
+  [CK.ConfigurationModel.Engine](../CK.ConfigurationModel.Engine/README.md). The model is created without reflection: an
+  `[UnsafeAccessor]` calls its constructor and the `init` setters of the read properties (the others keep their
+  initializer). The `required` members are checked by the reader, never by a constructor.
+
+A project that declares a model needs nothing but this package (no analyzer, no `partial`).
 
 ## Reading a model
 
-[`ConfigurationModelReader.TryRead<T>`](ConfigurationModelReader.cs) reads a model from the **layers** of its section: the
+[`ConfigurationModelReader.TryRead`](ConfigurationModelReader.cs) reads a model, by its description (`TryRead<T>`
+describes `T` by reflection: the tools and the tests), from the **layers** of its section: the
 section itself, then the sections of the levels above it that hold defaults (the `"Defaults"` of the AppIdentity
 configuration), the nearest first.
 
@@ -80,5 +82,5 @@ Outside DI (at build time, in a tool), a collector is
 [`ConfigurationModelSchema.ToJsonSchema`](ConfigurationModelSchema.cs) writes a description as a JSON Schema (2020-12):
 an object per model (`required`, `additionalProperties: false`, `description`), the nested models in `$defs`, the lists
 as arrays (a list of values also accepts a string), the dictionaries as objects of models, an opaque property as a
-`$ref` to its schema. The CK vocabulary (annotations): `x-ck-level` (when not `Init`), `x-ck-secret`,
+`$ref` to its schema, the default value of a basic value as its `default`. The CK vocabulary (annotations): `x-ck-level` (when not `Init`), `x-ck-secret`,
 `x-ck-perDeployment`.
