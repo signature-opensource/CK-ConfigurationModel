@@ -4,8 +4,8 @@
     <Description>The configuration models: a configurable type declares the model of its section, its description is built by reflection (and by the code that the engines generate, at run time), the reader reads it key by key along the levels of the configuration and collects the errors, the description is written as a JSON Schema.</Description>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Abstractions" Version="32.0.0-0.uc.1.ci.30" />
+    <PackageReference Include="CK.Abstractions" Version="32.0.0-0.uc.2" />
     <PackageReference Include="CK.Configuration" Version="3.0.0-0.uc.1" />
-    <PackageReference Include="CK.Globalization" Version="8.0.0-0.uc.1.ci.36" />
+    <PackageReference Include="CK.Globalization" Version="8.0.0-0.uc.2" />
   </ItemGroup>
 </Project>

@@ -4,7 +4,7 @@
     <Description>The engine side of the configuration models: generates the description of a model and its creation (UnsafeAccessor: no reflection at run time) in the code of an engine.</Description>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.CodeGen" Version="18.0.0-0.uc.1.ci.18" />
+    <PackageReference Include="CK.CodeGen" Version="18.0.0-0.uc.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.ConfigurationModel\CK.ConfigurationModel.csproj" />
