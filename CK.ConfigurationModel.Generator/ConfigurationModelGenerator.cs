@@ -117,11 +117,14 @@ public sealed class ConfigurationModelGenerator : IIncrementalGenerator
         b.Append( props.ToString() ).AppendLine( " )," );
         b.Append( "            static v => new " ).Append( self ).AppendLine( "( v ) );" );
         b.AppendLine();
+        // A required member that is not read is an error of the reader: the model is then never returned (fail closed).
+        b.AppendLine( "#pragma warning disable CS8618" );
         b.AppendLine( "    [global::System.Diagnostics.CodeAnalysis.SetsRequiredMembers]" );
         b.Append( "    private " ).Append( model.Name ).AppendLine( "( global::CK.Core.ConfigurationModelValues v )" );
         b.AppendLine( "    {" );
         b.Append( assigns.ToString() );
         b.AppendLine( "    }" );
+        b.AppendLine( "#pragma warning restore CS8618" );
         if( !hasExplicitConstructor )
         {
             b.AppendLine();
@@ -290,17 +293,16 @@ public sealed class ConfigurationModelGenerator : IIncrementalGenerator
     static string Literal( string? s ) => s == null ? "null" : SymbolDisplay.FormatLiteral( s, quote: true );
 
     // The <summary> of the Xml documentation of a declaration, as plain text: a code reference is its leaf name, <c> and
-    // <code> become ` markers, the other tags are removed, the white spaces are collapsed.
+    // <code> become ` markers, the other tags are removed, the white spaces are collapsed. The /// lines are read as
+    // text: without a documentation file, the compiler doesn't parse them (they are plain comments).
     static string? GetDocumentation( MemberDeclarationSyntax declaration )
     {
-        var doc = declaration.GetLeadingTrivia()
-                             .Select( t => t.GetStructure() )
-                             .OfType<DocumentationCommentTriviaSyntax>()
-                             .FirstOrDefault();
-        var summary = doc?.Content.OfType<XmlElementSyntax>().FirstOrDefault( e => e.StartTag.Name.LocalName.Text == "summary" );
-        if( summary == null ) return null;
-        var text = string.Concat( summary.Content.Select( c => c.ToFullString() ) );
-        text = Regex.Replace( text, @"^\s*///", "", RegexOptions.Multiline );
+        var lines = Regex.Matches( declaration.GetLeadingTrivia().ToFullString(), @"^\s*///(.*)$", RegexOptions.Multiline )
+                         .Cast<Match>()
+                         .Select( m => m.Groups[1].Value.TrimEnd( '\r' ) );
+        var summary = Regex.Match( string.Join( "\n", lines ), @"<summary>(.*?)</summary>", RegexOptions.Singleline );
+        if( !summary.Success ) return null;
+        var text = summary.Groups[1].Value;
         text = Regex.Replace( text, @"<see\s+(?:cref|langword|href)\s*=\s*""(?:[A-Z]:)?(?:[^""]*\.)?([^"".]+)""\s*/>", "$1" );
         text = Regex.Replace( text, @"<see\s+[^>]*>(.*?)</see>", "$1", RegexOptions.Singleline );
         text = Regex.Replace( text, @"<(?:paramref|typeparamref)\s+name\s*=\s*""([^""]*)""\s*/>", "$1" );
