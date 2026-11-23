@@ -149,6 +149,9 @@ public class ConfigurationModelTests
         var scheme = schema["$defs"]!["CK.ConfigurationModel.Tests.SchemeModel"]!;
         scheme["properties"]!["ClientSecret"]!["x-ck-secret"]!.GetValue<bool>().ShouldBeTrue();
         scheme["properties"]!["Authority"]!["format"]!.GetValue<string>().ShouldBe( "uri" );
+        var timeout = schema["$defs"]!["CK.ConfigurationModel.Tests.PasskeyModel"]!["properties"]!["Timeout"]!;
+        timeout["x-ck-format"]!.GetValue<string>().ShouldBe( "timespan" );
+        timeout["default"]!.GetValue<string>().ShouldBe( "00:05:00" );
     }
 
     [Test]

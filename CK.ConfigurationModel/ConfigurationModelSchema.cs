@@ -12,13 +12,16 @@ namespace CK.Core;
 ///   <item>A model is an object schema: its properties, <c>required</c>, <c>additionalProperties: false</c> (an unknown key
 ///   is an error), its documentation in <c>description</c>. A nested model is a <c>$ref</c> to its <c>$defs</c>.</item>
 ///   <item>A value: <c>string</c>, <c>boolean</c>, <c>integer</c>, <c>number</c>; an enum lists its names; a <c>Guid</c>
-///   and an <c>Uri</c> are strings of format <c>uuid</c> and <c>uri</c>; a <c>TimeSpan</c> a string.</item>
+///   and an <c>Uri</c> are strings of format <c>uuid</c> and <c>uri</c>; a <c>TimeSpan</c> a string with
+///   <c>x-ck-format: "timespan"</c> (the .NET constant format: <c>"00:05:00"</c>, <c>"1.00:00:00"</c>; the <c>duration</c>
+///   format of JSON Schema is ISO 8601, another syntax).</item>
 ///   <item>A list is an <c>array</c> (a list of values also accepts a comma separated <c>string</c>); a dictionary an
 ///   <c>object</c> whose <c>additionalProperties</c> is the model of its entries.</item>
 ///   <item>The default value of a basic value (its initializer) is its <c>default</c>.</item>
 ///   <item>An opaque property is a <c>$ref</c> to its schema (an empty schema without one).</item>
 ///   <item>The CK vocabulary (annotations): <c>x-ck-level</c> (<c>"Compile"</c>, <c>"Init"</c>, <c>"Run"</c>),
-///   <c>x-ck-secret</c> and <c>x-ck-perDeployment</c> (<c>true</c> when they apply).</item>
+///   <c>x-ck-secret</c> and <c>x-ck-perDeployment</c> (<c>true</c> when they apply), <c>x-ck-format</c> (the syntax of a
+///   string value that JSON Schema doesn't name: <c>"timespan"</c>).</item>
 /// </list>
 /// </summary>
 public static class ConfigurationModelSchema
@@ -109,7 +112,8 @@ public static class ConfigurationModelSchema
 
     static JsonObject WriteValue( Type t )
     {
-        if( t == typeof( string ) || t == typeof( TimeSpan ) ) return new JsonObject { ["type"] = "string" };
+        if( t == typeof( string ) ) return new JsonObject { ["type"] = "string" };
+        if( t == typeof( TimeSpan ) ) return new JsonObject { ["type"] = "string", ["x-ck-format"] = "timespan" };
         if( t == typeof( bool ) ) return new JsonObject { ["type"] = "boolean" };
         if( t == typeof( int ) || t == typeof( long ) ) return new JsonObject { ["type"] = "integer" };
         if( t == typeof( double ) || t == typeof( decimal ) ) return new JsonObject { ["type"] = "number" };

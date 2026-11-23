@@ -83,4 +83,5 @@ Outside DI (at build time, in a tool), a collector is
 an object per model (`required`, `additionalProperties: false`, `description`), the nested models in `$defs`, the lists
 as arrays (a list of values also accepts a string), the dictionaries as objects of models, an opaque property as a
 `$ref` to its schema, the default value of a basic value as its `default`. The CK vocabulary (annotations): `x-ck-level` (when not `Init`), `x-ck-secret`,
-`x-ck-perDeployment`.
+`x-ck-perDeployment`, `x-ck-format` (`"timespan"` on a `TimeSpan` string: the .NET syntax `"00:05:00"`, not the ISO 8601
+`duration` of JSON Schema).
