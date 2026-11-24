@@ -31,10 +31,10 @@ public sealed class PasskeyModel : IConfigurationModel
     /// </summary>
     public string EffectiveRpName => RpName ?? RpId.ToLowerInvariant();
 
-    public void Validate( UserMessageCollector collector, string path )
+    public void Validate( IConfigurationValidationContext context )
     {
-        if( Uri.CheckHostName( RpId.Trim() ) != UriHostNameType.Dns ) collector.Error( $"'{path}:RpId' = '{RpId}': a domain name is expected." );
-        if( Timeout <= TimeSpan.Zero || Timeout > TimeSpan.FromMinutes( 10 ) ) collector.Error( $"'{path}:Timeout': at most 10 minutes." );
+        if( Uri.CheckHostName( RpId.Trim() ) != UriHostNameType.Dns ) context.Error( $"'{context.Path}:RpId' = '{RpId}': a domain name is expected." );
+        if( Timeout <= TimeSpan.Zero || Timeout > TimeSpan.FromMinutes( 10 ) ) context.Error( $"'{context.Path}:Timeout': at most 10 minutes." );
     }
 }
 

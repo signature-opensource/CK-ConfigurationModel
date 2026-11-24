@@ -21,24 +21,25 @@ public sealed class PasskeyConfiguration : IConfigurationModel
     // A derived member (a normalized value, a computed default): not a key.
     public string EffectiveRpName => RpName ?? RpId.ToLowerInvariant();
 
-    public void Validate( UserMessageCollector collector, string path )
+    public void Validate( IConfigurationValidationContext context )
     {
-        if( Timeout <= TimeSpan.Zero || Timeout > TimeSpan.FromMinutes( 10 ) ) collector.Error( $"'{path}:Timeout': at most 10 minutes." );
+        if( Timeout <= TimeSpan.Zero || Timeout > TimeSpan.FromMinutes( 10 ) ) context.Error( $"'{context.Path}:Timeout': at most 10 minutes." );
     }
 }
 ```
 
-- [`[ConfigurationModel]`](ConfigurationModelAttribute.cs) marks the class (it has a parameterless constructor, public
-  or not); the configurable type that owns it says so with `[Configuration<TModel>]` (CK.Abstractions).
+- [`[ConfigurationModel]`](https://github.com/signature-opensource/CK-Abstractions/blob/stable/CK.AppBuilder.Abstractions/ConfigurationModel/ConfigurationModelAttribute.cs) marks the class (it has a parameterless constructor, public
+  or not); the configurable type that owns it says so with `[Configuration<TModel>]` (CK.AppBuilder.Abstractions).
 - **The keys** are the public instance properties with a setter or an `init` accessor declared by the class: a `required`
   one is required, a nullable one is optional, an initializer is the default. A get-only property is a derived member.
 - **A property** is a basic value (string, bool, int, long, double, decimal, an enum by name, `TimeSpan`, `Guid`, `Uri`),
   a nested model, a list (an array, `IReadOnlyList<T>`, `IReadOnlyCollection<T>`, `IEnumerable<T>`) of values or models,
   a dictionary of models by name (`IReadOnlyDictionary<string, TModel>`, `IDictionary`, `Dictionary`), or an opaque
   `IConfiguration` (its consumer reads it; `[ConfigurationSchema( uri )]` names the JSON Schema that describes it).
-- **The metadata** are attributes of the properties (CK.Abstractions): `[ConfigurationLevel]` (`Init` by default),
+- **The metadata** are attributes of the properties (CK.AppBuilder.Abstractions): `[ConfigurationLevel]` (`Init` by default),
   `[ConfigurationSecret]`, `[ConfigurationPerDeployment]`.
-- [`IConfigurationModel`](IConfigurationModel.cs) (optional): `Validate( UserMessageCollector, path )` checks what the
+- [`IConfigurationModel`](https://github.com/signature-opensource/CK-Abstractions/blob/stable/CK.AppBuilder.Abstractions/ConfigurationModel/IConfigurationModel.cs)
+  (optional): `Validate( IConfigurationValidationContext )` (the `Path` of the section, `Error`, `Warn`) checks what the
   types can't say. It has no service: it runs wherever the model is read.
 
 ## The description

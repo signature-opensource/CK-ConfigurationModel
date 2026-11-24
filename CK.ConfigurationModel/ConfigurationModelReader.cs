@@ -16,7 +16,7 @@ namespace CK.Core;
 ///   string (as <c>ReadStringArray</c> of CK.Configuration).</item>
 ///   <item><b>Every error is collected</b> in the <see cref="UserMessageCollector"/>: an unknown key (in any layer), a
 ///   missing required key, a value that can't be converted (the invariant culture), then the
-///   <see cref="IConfigurationModel.Validate(UserMessageCollector, string)"/> of the model.</item>
+///   <see cref="IConfigurationModel.Validate(IConfigurationValidationContext)"/> of the model.</item>
 ///   <item><b>Fail closed:</b> when an error has been collected, there is no model.</item>
 /// </list>
 /// </summary>
@@ -85,7 +85,7 @@ public static class ConfigurationModelReader
         var model = ReadModel( description, layers, path, collector, reserved );
         if( model is IConfigurationModel validated && collector.ErrorCount == errorCount )
         {
-            validated.Validate( collector, path );
+            validated.Validate( new ValidationContext( collector, path ) );
         }
         return collector.ErrorCount == errorCount ? model : null;
     }
@@ -253,6 +253,24 @@ public static class ConfigurationModelReader
             Throw.NotSupportedException( $"Unsupported configuration value type '{type}'." );
         }
         return value != null;
+    }
+
+    // The context of IConfigurationModel.Validate: the messages go to the collector of the reading.
+    sealed class ValidationContext : IConfigurationValidationContext
+    {
+        readonly UserMessageCollector _collector;
+
+        public ValidationContext( UserMessageCollector collector, string path )
+        {
+            _collector = collector;
+            Path = path;
+        }
+
+        public string Path { get; }
+
+        public void Error( string message ) => _collector.Error( message );
+
+        public void Warn( string message ) => _collector.Warn( message );
     }
 
     static string DisplayName( Type t ) => t.IsEnum
