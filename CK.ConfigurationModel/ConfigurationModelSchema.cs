@@ -104,7 +104,7 @@ public static class ConfigurationModelSchema
                                                new JsonObject { ["type"] = "string" } )
                 };
             case ConfigurationPropertyKind.Dictionary:
-                return new JsonObject { ["type"] = "object", ["additionalProperties"] = Ref( p.Model!, defs ) };
+                return new JsonObject { ["type"] = "object", ["additionalProperties"] = p.Model != null ? Ref( p.Model, defs ) : WriteValue( p.ValueType! ) };
             default:
                 return p.SchemaUri != null ? new JsonObject { ["$ref"] = p.SchemaUri } : new JsonObject();
         }

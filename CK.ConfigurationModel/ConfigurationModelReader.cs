@@ -217,8 +217,24 @@ public static class ConfigurationModelReader
         {
             var entryLayers = layers.Select( l => l?.TryGetSection( name ) ).ToArray();
             var nearest = Array.Find( entryLayers, s => s != null )!;
-            var m = ReadModel( p.Model!, entryLayers, nearest.Path, collector );
-            result.Add( new KeyValuePair<string, object?>( name, m ) );
+            if( p.Model != null )
+            {
+                var m = ReadModel( p.Model, entryLayers, nearest.Path, collector );
+                result.Add( new KeyValuePair<string, object?>( name, m ) );
+            }
+            // A value: the one of the nearest layer.
+            else if( nearest.Value == null )
+            {
+                collector.Error( $"'{nearest.Path}' must be a value ({DisplayName( p.ValueType! )}), not a section." );
+            }
+            else if( TryConvert( nearest.Value, p.ValueType!, out var v ) )
+            {
+                result.Add( new KeyValuePair<string, object?>( name, v ) );
+            }
+            else
+            {
+                collector.Error( $"'{nearest.Path}' = '{nearest.Value}': {DisplayName( p.ValueType! )} expected." );
+            }
         }
         return result;
     }

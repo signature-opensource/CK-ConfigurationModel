@@ -27,7 +27,8 @@ public enum ConfigurationPropertyKind
     List,
 
     /// <summary>
-    /// A dictionary of models (<see cref="ConfigurationPropertyDescription.Model"/>) by name.
+    /// A dictionary by name of models (<see cref="ConfigurationPropertyDescription.Model"/>) or of values
+    /// (<see cref="ConfigurationPropertyDescription.ValueType"/>).
     /// </summary>
     Dictionary,
 

@@ -76,6 +76,8 @@ public sealed class RootModel
 
     public IReadOnlyDictionary<string, SchemeModel> Schemes { get; init; } = new Dictionary<string, SchemeModel>();
 
+    public IReadOnlyDictionary<string, TimeSpan> Lifetimes { get; init; } = new Dictionary<string, TimeSpan>();
+
     [ConfigurationPerDeployment]
     public string? PublicUrl { get; init; }
 

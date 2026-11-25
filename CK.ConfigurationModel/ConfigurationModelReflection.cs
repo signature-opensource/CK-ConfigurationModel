@@ -141,10 +141,11 @@ static class ConfigurationModelReflection
                 return a;
             };
         }
-        else if( TryGetDictionaryValue( type, out var value ) && IsModel( value ) )
+        else if( TryGetDictionaryValue( type, out var value ) && (IsModel( value ) || IsBasic( value )) )
         {
             kind = ConfigurationPropertyKind.Dictionary;
-            modelType = value;
+            if( IsModel( value ) ) modelType = value;
+            else valueType = value;
             var dictionaryType = typeof( Dictionary<,> ).MakeGenericType( typeof( string ), value );
             createCollection = o =>
             {
@@ -157,7 +158,7 @@ static class ConfigurationModelReflection
         {
             error = $"The property '{p.Name}' of the configuration model '{model.FullName}' has an unsupported type '{p.PropertyType}': a basic value "
                     + "(string, bool, int, long, double, decimal, enum, TimeSpan, Guid, Uri), a [ConfigurationModel], an array or a read only list "
-                    + "of them, a IReadOnlyDictionary<string, model>, or an IConfiguration is expected.";
+                    + "of them, a IReadOnlyDictionary<string, model or basic value>, or an IConfiguration is expected.";
             return false;
         }
         // A nested model must be valid too (its errors are the errors of this one).

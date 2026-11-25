@@ -57,7 +57,7 @@ public class CodeWriterTests
         m.Timeout.ShouldBe( TimeSpan.FromMinutes( 5 ) );
 
         var root2 = (RootModel?)ConfigurationModelReader.TryRead( d,
-                                                                  [Section( "Root", """{ "Count": "7", "Cultures": "fr, en", "Passkey": { "RpId": "x.org" }, "Schemes": { "A": { "Authority": "https://a", "ClientId": "a" } } }""" )],
+                                                                  [Section( "Root", """{ "Count": "7", "Cultures": "fr, en", "Passkey": { "RpId": "x.org" }, "Schemes": { "A": { "Authority": "https://a", "ClientId": "a" } }, "Lifetimes": { "A": "00:00:30" } }""" )],
                                                                   "Test:Root",
                                                                   c );
         root2.ShouldNotBeNull();
@@ -65,5 +65,6 @@ public class CodeWriterTests
         root2.Cultures.ShouldBe( ["fr", "en"] );
         root2.Passkey!.RpId.ShouldBe( "x.org" );
         root2.Schemes["a"].ClientId.ShouldBe( "a" );
+        root2.Lifetimes["a"].ShouldBe( TimeSpan.FromSeconds( 30 ) );
     }
 }

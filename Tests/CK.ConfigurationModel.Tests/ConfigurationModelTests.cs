@@ -94,7 +94,7 @@ public class ConfigurationModelTests
     {
         // The party's own section, then its "Defaults" (the nearest first).
         var party = Section( "Root", """
-            { "Count": 7, "Passkey": { "RpName": "Mine" }, "Schemes": { "A": { "ClientId": "a2" } } }
+            { "Count": 7, "Passkey": { "RpName": "Mine" }, "Schemes": { "A": { "ClientId": "a2" } }, "Lifetimes": { "Password": "00:10:00" } }
             """ );
         var defaults = Section( "Root", """
             {
@@ -102,7 +102,8 @@ public class ConfigurationModelTests
               "Cultures": "fr, en",
               "Passkey": { "RpId": "example.com", "RpName": "Default" },
               "Schemes": { "A": { "Authority": "https://a.example.com", "ClientId": "a1" }, "B": { "Authority": "https://b.example.com", "ClientId": "b" } },
-              "Kestrel": { "Endpoints": { "Http": { "Url": "http://localhost:5000" } } }
+              "Kestrel": { "Endpoints": { "Http": { "Url": "http://localhost:5000" } } },
+              "Lifetimes": { "Password": "00:01:00", "Weak": "0" }
             }
             """ );
         var c = Collector();
@@ -117,6 +118,21 @@ public class ConfigurationModelTests
         m.Schemes["a"].ClientId.ShouldBe( "a2" );
         m.Schemes["A"].Authority.ShouldBe( new Uri( "https://a.example.com" ) );
         m.Kestrel.ShouldNotBeNull()["Endpoints:Http:Url"].ShouldBe( "http://localhost:5000" );
+        // A dictionary of values: entry by entry, the value of the nearest layer.
+        m.Lifetimes.Count.ShouldBe( 2 );
+        m.Lifetimes["password"].ShouldBe( TimeSpan.FromMinutes( 10 ) );
+        m.Lifetimes["Weak"].ShouldBe( TimeSpan.Zero );
+    }
+
+    [Test]
+    public void an_entry_of_a_dictionary_of_values_is_a_value()
+    {
+        var c = Collector();
+        ConfigurationModelReader.TryRead<RootModel>( Section( "Root", """{ "Lifetimes": { "A": "soon", "B": { "X": 1 } } }""" ), "Root", c, out _ ).ShouldBeFalse();
+        var errors = Errors( c );
+        errors.Length.ShouldBe( 2 );
+        errors.ShouldContain( e => e.StartsWith( "'Test:Root:Lifetimes:A' = 'soon': a time span" ) );
+        errors.ShouldContain( e => e.StartsWith( "'Test:Root:Lifetimes:B' must be a value (a time span" ) && e.EndsWith( "not a section." ) );
     }
 
     [Test]
@@ -142,6 +158,7 @@ public class ConfigurationModelTests
         props["Count"]!["x-ck-level"]!.GetValue<string>().ShouldBe( "Run" );
         props["Mode"]!["enum"]!.AsArray().Select( n => n!.GetValue<string>() ).ShouldBe( ["Off", "Lax", "Strict"] );
         props["PublicUrl"]!["x-ck-perDeployment"]!.GetValue<bool>().ShouldBeTrue();
+        props["Lifetimes"]!["additionalProperties"]!["x-ck-format"]!.GetValue<string>().ShouldBe( "timespan" );
         props["Kestrel"]!["$ref"]!.GetValue<string>().ShouldBe( "https://json.schemastore.org/appsettings.json#/definitions/kestrel" );
         props["Passkey"]!["$ref"]!.GetValue<string>().ShouldBe( "#/$defs/CK.ConfigurationModel.Tests.PasskeyModel" );
         var passkey = schema["$defs"]!["CK.ConfigurationModel.Tests.PasskeyModel"]!;

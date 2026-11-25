@@ -102,7 +102,7 @@ public sealed class ConfigurationModelCodeWriter
             }
             else if( p.Kind == ConfigurationPropertyKind.Dictionary )
             {
-                var value = nestedType!.ToGlobalTypeName();
+                var value = (nestedType ?? p.ValueType!).ToGlobalTypeName();
                 createCollection = "static o => { var d = new global::System.Collections.Generic.Dictionary<string, " + value + ">( global::System.StringComparer.OrdinalIgnoreCase ); "
                                    + "foreach( var e in (global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.KeyValuePair<string, object?>>)o ) d.Add( e.Key, (" + value + ")e.Value! ); return d; }";
             }

@@ -34,7 +34,7 @@ public sealed class PasskeyConfiguration : IConfigurationModel
   one is required, a nullable one is optional, an initializer is the default. A get-only property is a derived member.
 - **A property** is a basic value (string, bool, int, long, double, decimal, an enum by name, `TimeSpan`, `Guid`, `Uri`),
   a nested model, a list (an array, `IReadOnlyList<T>`, `IReadOnlyCollection<T>`, `IEnumerable<T>`) of values or models,
-  a dictionary of models by name (`IReadOnlyDictionary<string, TModel>`, `IDictionary`, `Dictionary`), or an opaque
+  a dictionary by name of models or of values (`IReadOnlyDictionary<string, T>`, `IDictionary`, `Dictionary`), or an opaque
   `IConfiguration` (its consumer reads it; `[ConfigurationSchema( uri )]` names the JSON Schema that describes it).
 - **The metadata** are attributes of the properties (CK.AppBuilder.Abstractions): `[ConfigurationLevel]` (`Init` by default),
   `[ConfigurationSecret]`, `[ConfigurationPerDeployment]`.
@@ -67,7 +67,8 @@ section itself, then the sections of the levels above it that hold defaults (the
 configuration), the nearest first.
 
 - **Key by key:** each property is the value of the nearest layer that has its key; a nested model key by key from the
-  layers of its key; a dictionary entry by entry (the union of the entries of the layers); a list as a whole. A list of
+  layers of its key; a dictionary entry by entry (the union of the entries of the layers: a model key by key, a value
+  from the nearest layer); a list as a whole. A list of
   values also accepts a comma separated string.
 - **The reserved keys** (the options of the owner of the model, keys of the same section) are not unknown keys.
 - **Every error is collected** in the `UserMessageCollector` (CK.Globalization): an unknown key in any layer, a missing
@@ -82,7 +83,8 @@ Outside DI (at build time, in a tool), a collector is
 
 [`ConfigurationModelSchema.ToJsonSchema`](ConfigurationModelSchema.cs) writes a description as a JSON Schema (2020-12):
 an object per model (`required`, `additionalProperties: false`, `description`), the nested models in `$defs`, the lists
-as arrays (a list of values also accepts a string), the dictionaries as objects of models, an opaque property as a
+as arrays (a list of values also accepts a string), the dictionaries as objects of models or of values
+(`additionalProperties`), an opaque property as a
 `$ref` to its schema, the default value of a basic value as its `default`. The CK vocabulary (annotations): `x-ck-level` (when not `Init`), `x-ck-secret`,
 `x-ck-perDeployment`, `x-ck-format` (`"timespan"` on a `TimeSpan` string: the .NET syntax `"00:05:00"`, not the ISO 8601
 `duration` of JSON Schema).
