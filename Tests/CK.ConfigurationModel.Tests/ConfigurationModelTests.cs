@@ -90,6 +90,20 @@ public class ConfigurationModelTests
     }
 
     [Test]
+    public void the_nested_models_and_the_entries_of_a_dictionary_are_validated()
+    {
+        var c = Collector();
+        ConfigurationModelReader.TryRead<RootModel>( Section( "Root", """
+            {
+              "Passkey": { "RpId": "http://x:80" },
+              "Schemes": { "A": { "Authority": "ftp://a", "ClientId": "x" }, "B": { "Authority": "https://b", "ClientId": "y" } }
+            }
+            """ ), "Root", c, out _ ).ShouldBeFalse();
+        Errors( c ).ShouldBe( ["'Test:Root:Passkey:RpId' = 'http://x:80': a domain name is expected.", "'Test:Root:Schemes:A:Authority': https expected."],
+                              ignoreOrder: true );
+    }
+
+    [Test]
     public void the_values_are_read_key_by_key_along_the_layers()
     {
         // The party's own section, then its "Defaults" (the nearest first).

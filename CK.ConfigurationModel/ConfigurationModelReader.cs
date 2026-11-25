@@ -83,10 +83,6 @@ public static class ConfigurationModelReader
         int errorCount = collector.ErrorCount;
         var reserved = reservedKeys != null ? new HashSet<string>( reservedKeys, StringComparer.OrdinalIgnoreCase ) : null;
         var model = ReadModel( description, layers, path, collector, reserved );
-        if( model is IConfigurationModel validated && collector.ErrorCount == errorCount )
-        {
-            validated.Validate( new ValidationContext( collector, path ) );
-        }
         return collector.ErrorCount == errorCount ? model : null;
     }
 
@@ -96,6 +92,7 @@ public static class ConfigurationModelReader
                               UserMessageCollector collector,
                               HashSet<string>? reservedKeys = null )
     {
+        int errorCount = collector.ErrorCount;
         // An unknown key in any layer is an error: a misspelled key is never silent.
         foreach( var layer in layers )
         {
@@ -151,7 +148,14 @@ public static class ConfigurationModelReader
             // No layer has the key.
             if( p.IsRequired ) collector.Error( $"'{propertyPath}' is required." );
         }
-        return d.Create( values );
+        var model = d.Create( values );
+        // Every model (the root, a nested one, an item of a list, an entry of a dictionary) is validated once its keys
+        // (and its own models) are read without error.
+        if( model is IConfigurationModel validated && collector.ErrorCount == errorCount )
+        {
+            validated.Validate( new ValidationContext( collector, path ) );
+        }
+        return model;
     }
 
     static List<object?>? ReadList( ConfigurationPropertyDescription p, ImmutableConfigurationSection section, UserMessageCollector collector )

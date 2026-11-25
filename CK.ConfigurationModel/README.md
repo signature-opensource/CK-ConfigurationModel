@@ -73,7 +73,8 @@ configuration), the nearest first.
 - **The reserved keys** (the options of the owner of the model, keys of the same section) are not unknown keys.
 - **Every error is collected** in the `UserMessageCollector` (CK.Globalization): an unknown key in any layer, a missing
   required key, a value that can't be converted (the invariant culture: `"00:05:00"`, `"1.00:00:00"` for a `TimeSpan`),
-  then `Validate`.
+  then `Validate` of every model (the root, a nested model, an item of a list, an entry of a dictionary), once its keys
+  are read without error.
 - **Fail closed:** when an error has been collected, there is no model.
 
 Outside DI (at build time, in a tool), a collector is

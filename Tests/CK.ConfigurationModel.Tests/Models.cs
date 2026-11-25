@@ -49,7 +49,7 @@ public enum Mode
 /// A scheme of a provider.
 /// </summary>
 [ConfigurationModel]
-public sealed class SchemeModel
+public sealed class SchemeModel : IConfigurationModel
 {
     public required Uri Authority { get; init; }
 
@@ -57,6 +57,11 @@ public sealed class SchemeModel
 
     [ConfigurationSecret]
     public string? ClientSecret { get; init; }
+
+    public void Validate( IConfigurationValidationContext context )
+    {
+        if( Authority.Scheme != "https" ) context.Error( $"'{context.Path}:Authority': https expected." );
+    }
 }
 
 /// <summary>
