@@ -66,5 +66,10 @@ public class CodeWriterTests
         root2.Passkey!.RpId.ShouldBe( "x.org" );
         root2.Schemes["a"].ClientId.ShouldBe( "a" );
         root2.Lifetimes["a"].ShouldBe( TimeSpan.FromSeconds( 30 ) );
+
+        var root3 = (RootModel?)ConfigurationModelReader.TryRead( d, [Section( "Root", """{ "ConnectionString": { "$SECRET": "Back:Db" }, "Databases": { "h": "x" } }""" )], "Test:Root", c );
+        root3.ShouldNotBeNull();
+        root3.ConnectionString!.Value.SecretName.ShouldBe( "Back:Db" );
+        root3.Databases["h"].Value.ShouldBe( "x" );
     }
 }

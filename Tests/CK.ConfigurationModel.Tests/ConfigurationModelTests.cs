@@ -104,6 +104,34 @@ public class ConfigurationModelTests
     }
 
     [Test]
+    public void a_secret_value_is_a_value_or_a_handle()
+    {
+        var c = Collector();
+        ConfigurationModelReader.TryRead<RootModel>( Section( "Root", """
+            {
+              "ConnectionString": { "$SECRET": "Back:Db" },
+              "Databases": { "histo": "Server=.;Database=Histo", "other": { "$SECRET": "Back:Other" } }
+            }
+            """ ), "Root", c, out var m ).ShouldBeTrue( string.Join( ", ", Errors( c ) ) );
+        m!.ConnectionString!.Value.IsHandle.ShouldBeTrue();
+        m.ConnectionString.Value.SecretName.ShouldBe( "Back:Db" );
+        m.ConnectionString.Value.ToString().ShouldBe( """{ "$SECRET": "Back:Db" }""" );
+        m.Databases["histo"].Value.ShouldBe( "Server=.;Database=Histo" );
+        m.Databases["histo"].ToString().ShouldBe( "***", "A value is never displayed." );
+        m.Databases["other"].SecretName.ShouldBe( "Back:Other" );
+
+        c = Collector();
+        ConfigurationModelReader.TryRead<RootModel>( Section( "Root", """{ "ConnectionString": { "$SECRET": "not a name" } }""" ), "Root", c, out _ ).ShouldBeFalse();
+        Errors( c ).ShouldBe( ["""'Test:Root:ConnectionString' must be a value (a value or a secret handle { "$SECRET": "<Name>" }), not a section."""] );
+
+        ConfigurationModelDescription.TryGet( typeof( UndeclaredSecretModel ), out _, out var error ).ShouldBeFalse();
+        error.ShouldContain( "it must be a [ConfigurationSecret]" );
+        var schema = ConfigurationModelSchema.ToJsonSchema( ConfigurationModelDescription.Get( typeof( RootModel ) ) );
+        schema["properties"]!["ConnectionString"]!["type"]!.GetValue<string>().ShouldBe( "string" );
+        schema["properties"]!["ConnectionString"]!["x-ck-secret"]!.GetValue<bool>().ShouldBeTrue();
+    }
+
+    [Test]
     public void the_values_are_read_key_by_key_along_the_layers()
     {
         // The party's own section, then its "Defaults" (the nearest first).

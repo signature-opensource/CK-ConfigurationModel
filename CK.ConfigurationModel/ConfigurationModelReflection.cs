@@ -157,8 +157,14 @@ static class ConfigurationModelReflection
         else
         {
             error = $"The property '{p.Name}' of the configuration model '{model.FullName}' has an unsupported type '{p.PropertyType}': a basic value "
-                    + "(string, bool, int, long, double, decimal, enum, TimeSpan, Guid, Uri), a [ConfigurationModel], an array or a read only list "
+                    + "(string, bool, int, long, double, decimal, enum, TimeSpan, Guid, Uri, ConfigurationSecretValue), a [ConfigurationModel], an array or a read only list "
                     + "of them, a IReadOnlyDictionary<string, model or basic value>, or an IConfiguration is expected.";
+            return false;
+        }
+        // A ConfigurationSecretValue is a secret: it says so.
+        if( valueType == typeof( ConfigurationSecretValue ) && !p.IsDefined( typeof( ConfigurationSecretAttribute ), inherit: false ) )
+        {
+            error = $"The property '{p.Name}' of the configuration model '{model.FullName}' is a ConfigurationSecretValue: it must be a [ConfigurationSecret].";
             return false;
         }
         // A nested model must be valid too (its errors are the errors of this one).
@@ -201,7 +207,8 @@ static class ConfigurationModelReflection
     internal static bool IsBasic( Type t ) => t.IsEnum
                                               || t == typeof( string ) || t == typeof( bool ) || t == typeof( int ) || t == typeof( long )
                                               || t == typeof( double ) || t == typeof( decimal )
-                                              || t == typeof( TimeSpan ) || t == typeof( Guid ) || t == typeof( Uri );
+                                              || t == typeof( TimeSpan ) || t == typeof( Guid ) || t == typeof( Uri )
+                                              || t == typeof( ConfigurationSecretValue );
 
     internal static bool IsOpaque( Type t ) => t.FullName is "Microsoft.Extensions.Configuration.IConfiguration"
                                                           or "Microsoft.Extensions.Configuration.IConfigurationSection"

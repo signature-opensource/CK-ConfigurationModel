@@ -38,6 +38,10 @@ public sealed class PasskeyConfiguration : IConfigurationModel
   `IConfiguration` (its consumer reads it; `[ConfigurationSchema( uri )]` names the JSON Schema that describes it).
 - **The metadata** are attributes of the properties (CK.AppBuilder.Abstractions): `[ConfigurationLevel]` (`Init` by default),
   `[ConfigurationSecret]`, `[ConfigurationPerDeployment]`.
+- **A secret read before the handles are resolved** (a Builder aspect reads the configuration files) is a
+  `[ConfigurationSecret]` property of type `ConfigurationSecretValue` (CK.AppBuilder.Abstractions): a value, or the name
+  of the secret of its handle (`{ "$SECRET": "<Name>" }`) that its consumer resolves or projects. At run time the handles
+  are resolved: a secret is a `string`.
 - [`IConfigurationModel`](https://github.com/signature-opensource/CK-Abstractions/blob/stable/CK.AppBuilder.Abstractions/ConfigurationModel/IConfigurationModel.cs)
   (optional): `Validate( IConfigurationValidationContext )` (the `Path` of the section, `Error`, `Warn`) checks what the
   types can't say. It has no service: it runs wherever the model is read.

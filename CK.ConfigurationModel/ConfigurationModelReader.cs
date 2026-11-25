@@ -117,13 +117,7 @@ public static class ConfigurationModelReader
             {
                 case ConfigurationPropertyKind.Value:
                     if( nearest == null ) break;
-                    if( nearest.Value == null )
-                    {
-                        collector.Error( $"'{propertyPath}' must be a value ({DisplayName( p.ValueType! )}), not a section." );
-                        continue;
-                    }
-                    if( TryConvert( nearest.Value, p.ValueType!, out var v ) ) values.Set( i, v );
-                    else collector.Error( $"'{propertyPath}' = '{nearest.Value}': {DisplayName( p.ValueType! )} expected." );
+                    if( TryReadValue( nearest, p.ValueType!, collector, out var v ) ) values.Set( i, v );
                     continue;
                 case ConfigurationPropertyKind.Model:
                     if( nearest == null ) break;
@@ -227,20 +221,36 @@ public static class ConfigurationModelReader
                 result.Add( new KeyValuePair<string, object?>( name, m ) );
             }
             // A value: the one of the nearest layer.
-            else if( nearest.Value == null )
-            {
-                collector.Error( $"'{nearest.Path}' must be a value ({DisplayName( p.ValueType! )}), not a section." );
-            }
-            else if( TryConvert( nearest.Value, p.ValueType!, out var v ) )
+            else if( TryReadValue( nearest, p.ValueType!, collector, out var v ) )
             {
                 result.Add( new KeyValuePair<string, object?>( name, v ) );
             }
-            else
-            {
-                collector.Error( $"'{nearest.Path}' = '{nearest.Value}': {DisplayName( p.ValueType! )} expected." );
-            }
         }
         return result;
+    }
+
+    // A value, or the handle of a secret for a ConfigurationSecretValue (read before the handles are resolved).
+    static bool TryReadValue( ImmutableConfigurationSection s, Type type, UserMessageCollector collector, out object? value )
+    {
+        value = null;
+        if( s.Value == null )
+        {
+            if( type == typeof( ConfigurationSecretValue ) )
+            {
+                var children = s.GetChildren().ToList();
+                if( children is [var h] && h.Key.Equals( ConfigurationSecret.HandleKey, StringComparison.OrdinalIgnoreCase )
+                    && ConfigurationSecret.IsValidName( h.Value ) )
+                {
+                    value = ConfigurationSecretValue.FromHandle( h.Value );
+                    return true;
+                }
+            }
+            collector.Error( $"'{s.Path}' must be a value ({DisplayName( type )}), not a section." );
+            return false;
+        }
+        if( TryConvert( s.Value, type, out value ) ) return true;
+        collector.Error( $"'{s.Path}' = '{s.Value}': {DisplayName( type )} expected." );
+        return false;
     }
 
     /// <summary>
@@ -255,6 +265,7 @@ public static class ConfigurationModelReader
         var inv = CultureInfo.InvariantCulture;
         value = null;
         if( type == typeof( string ) ) { value = text; return true; }
+        if( type == typeof( ConfigurationSecretValue ) ) { value = ConfigurationSecretValue.FromValue( text ); return true; }
         if( type == typeof( bool ) ) { if( bool.TryParse( text, out var b ) ) value = b; }
         else if( type == typeof( int ) ) { if( int.TryParse( text, NumberStyles.Integer, inv, out var i ) ) value = i; }
         else if( type == typeof( long ) ) { if( long.TryParse( text, NumberStyles.Integer, inv, out var l ) ) value = l; }
@@ -295,5 +306,9 @@ public static class ConfigurationModelReader
 
     static string DisplayName( Type t ) => t.IsEnum
                                             ? $"one of {string.Join( ", ", Enum.GetNames( t ) )}"
-                                            : t == typeof( TimeSpan ) ? "a time span (\"00:05:00\", \"1.00:00:00\")" : $"a {t.Name}";
+                                            : t == typeof( TimeSpan )
+                                                ? "a time span (\"00:05:00\", \"1.00:00:00\")"
+                                                : t == typeof( ConfigurationSecretValue )
+                                                    ? $"a value or a secret handle {{ \"{ConfigurationSecret.HandleKey}\": \"<Name>\" }}"
+                                                    : $"a {t.Name}";
 }

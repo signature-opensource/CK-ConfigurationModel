@@ -112,7 +112,8 @@ public static class ConfigurationModelSchema
 
     static JsonObject WriteValue( Type t )
     {
-        if( t == typeof( string ) ) return new JsonObject { ["type"] = "string" };
+        // A secret value is a string in a file: its handle is the configurator's (x-ck-secret).
+        if( t == typeof( string ) || t == typeof( ConfigurationSecretValue ) ) return new JsonObject { ["type"] = "string" };
         if( t == typeof( TimeSpan ) ) return new JsonObject { ["type"] = "string", ["x-ck-format"] = "timespan" };
         if( t == typeof( bool ) ) return new JsonObject { ["type"] = "boolean" };
         if( t == typeof( int ) || t == typeof( long ) ) return new JsonObject { ["type"] = "integer" };

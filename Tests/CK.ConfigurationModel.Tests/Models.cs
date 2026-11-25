@@ -88,6 +88,21 @@ public sealed class RootModel
 
     [ConfigurationSchema( "https://json.schemastore.org/appsettings.json#/definitions/kestrel" )]
     public IConfiguration? Kestrel { get; init; }
+
+    [ConfigurationSecret]
+    public ConfigurationSecretValue? ConnectionString { get; init; }
+
+    [ConfigurationSecret]
+    public IReadOnlyDictionary<string, ConfigurationSecretValue> Databases { get; init; } = new Dictionary<string, ConfigurationSecretValue>();
+}
+
+/// <summary>
+/// A ConfigurationSecretValue that is not a [ConfigurationSecret].
+/// </summary>
+[ConfigurationModel]
+public sealed class UndeclaredSecretModel
+{
+    public ConfigurationSecretValue? ConnectionString { get; init; }
 }
 
 /// <summary>
