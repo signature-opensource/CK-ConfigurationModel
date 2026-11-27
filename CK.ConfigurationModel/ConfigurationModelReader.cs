@@ -70,26 +70,58 @@ public static class ConfigurationModelReader
     /// <param name="path">The configuration path of the model's section.</param>
     /// <param name="collector">The collector of the messages.</param>
     /// <param name="reservedKeys">The keys of the section that are not the model's (the options of its owner): not unknown.</param>
+    /// <param name="lenient">
+    /// True to report an unknown key and a value that can't be read (a wrong type, an unknown enum name) as warnings: such a
+    /// key keeps its default. A missing required key, a value that the levels above can't set
+    /// (<see cref="ConfigurationNoDefaultsAttribute"/>) and the errors of the model's <see cref="IConfigurationModel.Validate"/>
+    /// remain errors. For a configuration that tolerates its warnings (the "#Dev" environment of a party).
+    /// </param>
     /// <returns>The model, or null when an error has been collected.</returns>
     public static object? TryRead( ConfigurationModelDescription description,
                                    IReadOnlyList<ImmutableConfigurationSection?> layers,
                                    string path,
                                    UserMessageCollector collector,
-                                   IEnumerable<string>? reservedKeys = null )
+                                   IEnumerable<string>? reservedKeys = null,
+                                   bool lenient = false )
     {
         Throw.CheckNotNullArgument( description );
         Throw.CheckNotNullArgument( layers );
         Throw.CheckNotNullArgument( collector );
         int errorCount = collector.ErrorCount;
         var reserved = reservedKeys != null ? new HashSet<string>( reservedKeys, StringComparer.OrdinalIgnoreCase ) : null;
-        var model = ReadModel( description, layers, path, collector, reserved );
+        var model = ReadModel( description, layers, path, new Reading( collector, lenient ), reserved );
         return collector.ErrorCount == errorCount ? model : null;
+    }
+
+    // The collector of a reading: a problem that the reader can default is a warning when the reading is lenient.
+    sealed class Reading
+    {
+        public Reading( UserMessageCollector collector, bool lenient )
+        {
+            Collector = collector;
+            Lenient = lenient;
+        }
+
+        public UserMessageCollector Collector { get; }
+
+        public bool Lenient { get; }
+
+        public int ErrorCount => Collector.ErrorCount;
+
+        public void Error( string message ) => Collector.Error( message );
+
+        // An unknown key or an unreadable value: the key keeps its default when the reading is lenient.
+        public void Problem( string message )
+        {
+            if( Lenient ) Collector.Warn( message + " Its default is used." );
+            else Collector.Error( message );
+        }
     }
 
     static object? ReadModel( ConfigurationModelDescription d,
                               IReadOnlyList<ImmutableConfigurationSection?> layers,
                               string path,
-                              UserMessageCollector collector,
+                              Reading collector,
                               HashSet<string>? reservedKeys = null )
     {
         int errorCount = collector.ErrorCount;
@@ -102,7 +134,7 @@ public static class ConfigurationModelReader
                 if( d.Find( c.Key ) == null && reservedKeys?.Contains( c.Key ) != true )
                 {
                     var keys = string.Join( ", ", d.Properties.Select( p => p.Name ) );
-                    collector.Error( $"Unknown key '{c.Path}': the keys of '{layer.Path}' are {(keys.Length > 0 ? keys : "none")}." );
+                    collector.Problem( $"Unknown key '{c.Path}': the keys of '{layer.Path}' are {(keys.Length > 0 ? keys : "none")}." );
                 }
             }
         }
@@ -162,12 +194,12 @@ public static class ConfigurationModelReader
         // (and its own models) are read without error.
         if( model is IConfigurationModel validated && collector.ErrorCount == errorCount )
         {
-            validated.Validate( new ValidationContext( collector, path ) );
+            validated.Validate( new ValidationContext( collector.Collector, path ) );
         }
         return model;
     }
 
-    static List<object?>? ReadList( ConfigurationPropertyDescription p, ImmutableConfigurationSection section, UserMessageCollector collector )
+    static List<object?>? ReadList( ConfigurationPropertyDescription p, ImmutableConfigurationSection section, Reading collector )
     {
         var result = new List<object?>();
         bool success = true;
@@ -184,7 +216,7 @@ public static class ConfigurationModelReader
                 if( TryConvert( s, p.ValueType!, out var v ) ) result.Add( v );
                 else
                 {
-                    collector.Error( $"'{section.Path}' contains '{s}': {DisplayName( p.ValueType! )} expected." );
+                    collector.Problem( $"'{section.Path}' contains '{s}': {DisplayName( p.ValueType! )} expected." );
                     success = false;
                 }
             }
@@ -204,7 +236,7 @@ public static class ConfigurationModelReader
             }
             else
             {
-                collector.Error( $"'{item.Path}' = '{item.Value}': {DisplayName( p.ValueType! )} expected." );
+                collector.Problem( $"'{item.Path}' = '{item.Value}': {DisplayName( p.ValueType! )} expected." );
                 success = false;
             }
         }
@@ -213,7 +245,7 @@ public static class ConfigurationModelReader
 
     static List<KeyValuePair<string, object?>> ReadDictionary( ConfigurationPropertyDescription p,
                                                                ImmutableConfigurationSection?[] layers,
-                                                               UserMessageCollector collector )
+                                                               Reading collector )
     {
         // The union of the entries of the layers, in the order of their first appearance (the nearest layer first).
         var names = new List<string>();
@@ -245,7 +277,7 @@ public static class ConfigurationModelReader
     }
 
     // A value, or the handle of a secret for a ConfigurationSecretValue (read before the handles are resolved).
-    static bool TryReadValue( ImmutableConfigurationSection s, Type type, UserMessageCollector collector, out object? value )
+    static bool TryReadValue( ImmutableConfigurationSection s, Type type, Reading collector, out object? value )
     {
         value = null;
         if( s.Value == null )
@@ -260,11 +292,11 @@ public static class ConfigurationModelReader
                     return true;
                 }
             }
-            collector.Error( $"'{s.Path}' must be a value ({DisplayName( type )}), not a section." );
+            collector.Problem( $"'{s.Path}' must be a value ({DisplayName( type )}), not a section." );
             return false;
         }
         if( TryConvert( s.Value, type, out value ) ) return true;
-        collector.Error( $"'{s.Path}' = '{s.Value}': {DisplayName( type )} expected." );
+        collector.Problem( $"'{s.Path}' = '{s.Value}': {DisplayName( type )} expected." );
         return false;
     }
 

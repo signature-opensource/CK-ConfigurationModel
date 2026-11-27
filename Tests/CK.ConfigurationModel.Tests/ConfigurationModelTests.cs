@@ -247,4 +247,23 @@ public class ConfigurationModelTests
         ConfigurationModelReader.TryRead<AnchorsModel>( [null, Section( "KM", """{ "Anchors": { "A/$X": "1" } }""" )], "KM", c, out _ ).ShouldBeFalse();
         Errors( c ).ShouldContain( e => e.Contains( "'Anchors' is read on its owner's own section only" ) );
     }
+
+    [Test]
+    public void a_lenient_reading_reports_what_it_can_default_as_warnings()
+    {
+        var d = ConfigurationModelDescription.Get( typeof( AnchorsModel ) );
+        // An unreadable value keeps its default, an unknown key is ignored: warnings.
+        var c = Collector();
+        var m = (AnchorsModel?)ConfigurationModelReader.TryRead( d, [Section( "KM", """{ "Days": "many", "Nope": 1 }""" )], "KM", c, lenient: true );
+        m.ShouldNotBeNull().Days.ShouldBe( 30 );
+        Errors( c ).ShouldBeEmpty();
+        c.UserMessages.Count( x => x.Level == UserMessageLevel.Warn ).ShouldBe( 2 );
+        // Not lenient: errors, no model.
+        c = Collector();
+        ConfigurationModelReader.TryRead( d, [Section( "KM", """{ "Days": "many" }""" )], "KM", c ).ShouldBeNull();
+        Errors( c ).ShouldHaveSingleItem();
+        // A value that the levels above can't set stays an error.
+        c = Collector();
+        ConfigurationModelReader.TryRead( d, [null, Section( "KM", """{ "Anchors": { "A/$X": "1" } }""" )], "KM", c, lenient: true ).ShouldBeNull();
+    }
 }
