@@ -47,7 +47,11 @@ public static class ConfigurationModelMarkdown
 
     static string Format( ConfigurationPropertyDescription p, object? value )
     {
+        // A handle shows the name of its secret; a value of a secret type is never written, declared or not.
+        if( value is ConfigurationSecretValue secret ) return secret.SecretName != null ? $"`$SECRET:{secret.SecretName}`" : "*(secret)*";
         if( p.IsSecret ) return value == null ? "*(none)*" : "*(secret)*";
+        // A nested model (or a list or a dictionary of them) is written as JSON: never when it holds a secret.
+        if( value != null && p.Model != null && HasSecret( p.Model, [] ) ) return "*(contains secrets)*";
         return value switch
         {
             null => "*(none)*",
@@ -60,6 +64,12 @@ public static class ConfigurationModelMarkdown
                 => e.Cast<object?>().Any() ? string.Join( ", ", e.Cast<object?>().Select( v => $"`{Convert.ToString( v, CultureInfo.InvariantCulture )}`" ) ) : "*(empty)*",
             _ => $"`{JsonSerializer.Serialize( value, value.GetType(), _json )}`"
         };
+    }
+
+    static bool HasSecret( ConfigurationModelDescription d, HashSet<Type> visited )
+    {
+        if( !visited.Add( d.ModelType ) ) return false;
+        return d.Properties.Any( p => p.IsSecret || (p.Model != null && HasSecret( p.Model, visited )) );
     }
 
     // A table cell: no pipe, no new line.
