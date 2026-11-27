@@ -93,3 +93,10 @@ as arrays (a list of values also accepts a string), the dictionaries as objects 
 `$ref` to its schema, the default value of a basic value as its `default`. The CK vocabulary (annotations): `x-ck-level` (when not `Init`), `x-ck-secret`,
 `x-ck-perDeployment`, `x-ck-format` (`"timespan"` on a `TimeSpan` string: the .NET syntax `"00:05:00"`, not the ISO 8601
 `duration` of JSON Schema).
+
+## The Markdown table
+
+[`ConfigurationModelMarkdown.AppendTable`](ConfigurationModelMarkdown.cs) writes a model instance as a Markdown table,
+one row per property: its value, `*(default)*` when the configuration doesn't write the key (the written keys are
+given), `*(secret)*` for a secret (its value is never written). It reads the instance by reflection: it is for the tools
+and the App builder (the `architecture.md` of a host), not for the run time.
