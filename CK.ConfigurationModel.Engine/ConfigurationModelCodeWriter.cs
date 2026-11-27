@@ -117,7 +117,8 @@ public sealed class ConfigurationModelCodeWriter
                         .Append( ", " ).Append( Bool( p.IsSecret ) ).Append( ", " ).Append( Bool( p.IsPerDeployment ) )
                         .Append( ", " ).Append( Literal( p.SchemaUri ) ).Append( ", " ).Append( Literal( p.Documentation ) )
                         // The default value is for the JSON Schema of the tools (built by reflection): not at run time.
-                        .Append( ", " ).Append( createCollection ).Append( " )" );
+                        .Append( ", " ).Append( createCollection )
+                        .Append( p.IsNoDefaults ? ", isNoDefaults: true" : "" ).Append( " )" );
         }
         create.Append( "return m; }" );
         c.Append( "static global::CK.Core.ConfigurationModelDescription? _d;" ).NewLine()

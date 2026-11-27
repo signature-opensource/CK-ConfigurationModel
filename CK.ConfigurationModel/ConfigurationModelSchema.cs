@@ -67,6 +67,7 @@ public static class ConfigurationModelSchema
             if( p.Level != ConfigurationLevel.Init ) s["x-ck-level"] = p.Level.ToString();
             if( p.IsSecret ) s["x-ck-secret"] = true;
             if( p.IsPerDeployment ) s["x-ck-perDeployment"] = true;
+            if( p.IsNoDefaults ) s["x-ck-noDefaults"] = true;
             properties[p.Name] = s;
             if( p.IsRequired ) required.Add( p.Name );
         }

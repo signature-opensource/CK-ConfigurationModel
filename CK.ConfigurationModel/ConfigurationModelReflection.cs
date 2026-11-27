@@ -198,7 +198,8 @@ static class ConfigurationModelReflection
                                                             p.GetCustomAttribute<ConfigurationSchemaAttribute>()?.SchemaUri,
                                                             GetDocumentation( model.Assembly, "P:" + DocName( model ) + "." + p.Name ),
                                                             createCollection,
-                                                            kind == ConfigurationPropertyKind.Value && hasDefault ? current : null );
+                                                            kind == ConfigurationPropertyKind.Value && hasDefault ? current : null,
+                                                            p.IsDefined( typeof( ConfigurationNoDefaultsAttribute ), inherit: false ) );
         return true;
     }
 

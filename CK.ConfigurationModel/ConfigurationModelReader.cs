@@ -111,6 +111,21 @@ public static class ConfigurationModelReader
         {
             var p = d.Properties[i];
             var sub = layers.Select( l => l?.TryGetSection( p.Name ) ).ToArray();
+            // A property read on the owner's own section only: a value in a level above is an error.
+            if( p.IsNoDefaults && sub.Length > 1 )
+            {
+                bool above = false;
+                for( int iL = 1; iL < sub.Length; ++iL )
+                {
+                    if( sub[iL] is { } s )
+                    {
+                        collector.Error( $"'{s.Path}' can't be set here: '{p.Name}' is read on its owner's own section only (\"Defaults\" can't set it)." );
+                        above = true;
+                    }
+                }
+                if( above ) continue;
+                sub = [sub[0]];
+            }
             var nearest = Array.Find( sub, s => s != null );
             var propertyPath = nearest?.Path ?? $"{path}:{p.Name}";
             switch( p.Kind )

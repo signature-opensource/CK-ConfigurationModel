@@ -228,4 +228,23 @@ public class ConfigurationModelTests
         error.ShouldContain( "'Stream'" );
         error.ShouldContain( "unsupported type" );
     }
+
+    [Test]
+    public void a_NoDefaults_property_is_read_on_the_own_section_only()
+    {
+        var d = ConfigurationModelDescription.Get( typeof( AnchorsModel ) );
+        d.Find( "Anchors" ).ShouldNotBeNull().IsNoDefaults.ShouldBeTrue();
+        d.Find( "Days" ).ShouldNotBeNull().IsNoDefaults.ShouldBeFalse();
+
+        // The own section has it: the regular key still comes from the defaults.
+        var c = Collector();
+        ConfigurationModelReader.TryRead<AnchorsModel>( [Section( "KM", """{ "Anchors": { "A/$X": "1" } }""" ), Section( "KM", """{ "Days": 10 }""" )], "KM", c, out var m ).ShouldBeTrue();
+        m.ShouldNotBeNull().Anchors.ShouldNotBeNull()["A/$X"].ShouldBe( "1" );
+        m.Days.ShouldBe( 10 );
+
+        // A "Defaults" can't set it, whether the own section has it or not.
+        c = Collector();
+        ConfigurationModelReader.TryRead<AnchorsModel>( [null, Section( "KM", """{ "Anchors": { "A/$X": "1" } }""" )], "KM", c, out _ ).ShouldBeFalse();
+        Errors( c ).ShouldContain( e => e.Contains( "'Anchors' is read on its owner's own section only" ) );
+    }
 }

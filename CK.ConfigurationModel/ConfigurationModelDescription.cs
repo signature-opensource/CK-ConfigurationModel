@@ -161,6 +161,7 @@ public sealed class ConfigurationPropertyDescription
     /// <param name="documentation">The summary of the property's Xml documentation (plain text), if any.</param>
     /// <param name="createCollection">For a list or a dictionary: creates the property value from the read items (a list of values or models, or a list of named entries).</param>
     /// <param name="defaultValue">The default value of the property (its initializer), when it is a basic value: for the JSON Schema.</param>
+    /// <param name="isNoDefaults">Whether the property is read on the owner's own section only (<see cref="ConfigurationNoDefaultsAttribute"/>).</param>
     public ConfigurationPropertyDescription( string name,
                                              ConfigurationPropertyKind kind,
                                              Type? valueType,
@@ -174,8 +175,10 @@ public sealed class ConfigurationPropertyDescription
                                              string? schemaUri,
                                              string? documentation,
                                              Func<object, object>? createCollection = null,
-                                             object? defaultValue = null )
+                                             object? defaultValue = null,
+                                             bool isNoDefaults = false )
     {
+        IsNoDefaults = isNoDefaults;
         Throw.CheckNotNullOrWhiteSpaceArgument( name );
         Name = name;
         Kind = kind;
@@ -245,6 +248,12 @@ public sealed class ConfigurationPropertyDescription
     /// Gets whether each deployment writes the value (<see cref="ConfigurationPerDeploymentAttribute"/> on the property).
     /// </summary>
     public bool IsPerDeployment { get; }
+
+    /// <summary>
+    /// Gets whether the property is read on the owner's own section only, never from the levels above it
+    /// (<see cref="ConfigurationNoDefaultsAttribute"/> on the property): a value in a level above is an error.
+    /// </summary>
+    public bool IsNoDefaults { get; }
 
     /// <summary>
     /// Gets the JSON Schema of an opaque property (<see cref="ConfigurationSchemaAttribute"/>), if any.

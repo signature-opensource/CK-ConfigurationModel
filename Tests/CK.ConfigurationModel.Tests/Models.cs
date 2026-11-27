@@ -113,3 +113,15 @@ public sealed class UnsupportedModel
 {
     public System.IO.Stream? Stream { get; init; }
 }
+
+/// <summary>
+/// A security setting read on the party only (<see cref="ConfigurationNoDefaultsAttribute"/>) next to a regular one.
+/// </summary>
+[ConfigurationModel]
+public sealed class AnchorsModel
+{
+    [ConfigurationNoDefaults]
+    public IReadOnlyDictionary<string, string>? Anchors { get; init; }
+
+    public int Days { get; init; } = 30;
+}
